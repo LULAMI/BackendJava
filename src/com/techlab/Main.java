@@ -5,18 +5,23 @@ import com.techlab.excepciones.StockInsuficienteException;
 import com.techlab.pedidos.Pedido;
 import com.techlab.pedidos.PedidoService;
 import com.techlab.productos.Producto;
+import com.techlab.productos.ProductoAlimenticio;
+import com.techlab.productos.ProductoElectronico;
 import com.techlab.productos.ProductoService;
 
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    // Instancias compartidas para la entrada de datos y los servicios del sistema
     private static final Scanner sc = new Scanner(System.in);
     private static final ProductoService productoService = new ProductoService();
     private static final PedidoService pedidoService = new PedidoService();
 
     public static void main(String[] args) {
         int opcion;
+        
+        // Bucle principal para el menú de navegación
         do {
             mostrarMenu();
             opcion = leerEntero("Elija una opción: ");
@@ -31,8 +36,11 @@ public class Main {
                 default -> System.out.println("Opción inválida.");
             }
         } while (opcion != 7);
+
+        sc.close();
     }
 
+    // Despliega las opciones disponibles en consola
     private static void mostrarMenu() {
         System.out.println("\n=================================== SISTEMA DE GESTIÓN - TECHLAB ==================================\n");
         System.out.println("1) Agregar producto");
@@ -44,21 +52,40 @@ public class Main {
         System.out.println("7) Salir\n");
     }
 
-    // ---------- Opciones ----------
+    // ---------- Operaciones de Productos ----------
 
+    // Solicitud interactiva para instanciar subclases específicas (Electrónico o Alimenticio)
     private static void agregarProducto() {
+        System.out.println("Tipo de producto: 1) Electrónico  2) Alimenticio");
+        int tipo = leerEntero("Opción: ");
+        if (tipo != 1 && tipo != 2) {
+            System.out.println("Tipo inválido.");
+            return;
+        }
         System.out.print("Nombre: ");
         String nombre = sc.nextLine();
         double precio = leerDouble("Precio: ");
         int stock = leerEntero("Stock: ");
         try {
-            Producto p = productoService.agregar(nombre, precio, stock);
+            Producto p;
+            // Instanciación polimórfica según la selección del usuario
+            if (tipo == 1) {
+                int garantia = leerEntero("Garantía en meses: ");
+                p = new ProductoElectronico(nombre, precio, stock, garantia);
+            } else {
+                int dias = leerEntero("Días para el vencimiento: ");
+                p = new ProductoAlimenticio(nombre, precio, stock, dias);
+            }
+            
+            // Se registra la nueva instancia en el catálogo del servicio
+            productoService.agregar(p);
             System.out.println("Producto agregado: " + p);
         } catch (IllegalArgumentException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
 
+    // Muestra todos los productos registrados en el sistema
     private static void listarProductos() {
         List<Producto> lista = productoService.listar();
         if (lista.isEmpty()) {
@@ -70,6 +97,7 @@ public class Main {
         }
     }
 
+    // Búsqueda por ID o Nombre y posterior actualización opcional de atributos
     private static void buscarActualizarProducto() {
         System.out.println("Buscar por: 1) ID  2) Nombre");
         int modo = leerEntero("Opción: ");
@@ -123,6 +151,7 @@ public class Main {
         }
     }
 
+    // Elimina un producto de la colección por su identificador único
     private static void eliminarProducto() {
         int id = leerEntero("ID del producto a eliminar: ");
         try {
@@ -140,6 +169,9 @@ public class Main {
         }
     }
 
+    // ---------- Operaciones de Pedidos ----------
+
+    // Registro e inclusión de productos a una nueva orden de compra
     private static void crearPedido() {
         if (productoService.listar().isEmpty()) {
             System.out.println("No hay productos para armar un pedido.");
@@ -165,49 +197,4 @@ public class Main {
         if (pedido.estaVacio()) {
             System.out.println("El pedido quedó vacío, se cancela.");
             return;
-        }
-        System.out.println("\n" + pedido);
-        System.out.print("¿Confirmar pedido? (s/n): ");
-        if (sc.nextLine().trim().equalsIgnoreCase("s")) {
-            pedidoService.confirmar(pedido);
-            System.out.println("Pedido confirmado. Stock actualizado.");
-        } else {
-            System.out.println("Pedido cancelado.");
-        }
-    }
-
-    private static void listarPedidos() {
-        List<Pedido> lista = pedidoService.listar();
-        if (lista.isEmpty()) {
-            System.out.println("No hay pedidos realizados.");
-            return;
-        }
-        for (Pedido p : lista) {
-            System.out.println(p + "\n");
-        }
-    }
-
-    // ---------- Lectura segura ----------
-
-    private static int leerEntero(String mensaje) {
-        while (true) {
-            System.out.print(mensaje);
-            try {
-                return Integer.parseInt(sc.nextLine().trim());
-            } catch (NumberFormatException e) {
-                System.out.println("Ingresá un número entero válido.");
-            }
-        }
-    }
-
-    private static double leerDouble(String mensaje) {
-        while (true) {
-            System.out.print(mensaje);
-            try {
-                return Double.parseDouble(sc.nextLine().trim().replace(',', '.'));
-            } catch (NumberFormatException e) {
-                System.out.println("Ingresá un número válido (ej: 1500.50).");
-            }
-        }
-    }
-}
+            
